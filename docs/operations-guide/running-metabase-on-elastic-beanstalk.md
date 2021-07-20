@@ -21,8 +21,28 @@
 
 # Running Metabase on AWS Elastic Beanstalk
 
+This guide is comprised of two sections: one with a quick and simple way of launching Metabase for testing purposes only, and a second one with a more comprehensive guide so you can deploy Metabase with production-level capabilities.
 
-This quick launch setup is intended for testing purposes only, and is not intended for production use. We'll focus on deploying Metabase with a single instance and the embedded H2 database with the following components:
+## Quick and simple
+
+1) Download the [Metabase Community Edition AWS source bundle file](https://downloads.metabase.com/{{ site.latest_version }}/metabase-aws-eb.zip) to upload to Elastic Beanstalk.
+2) Click on this [pre-set link](https://console.aws.amazon.com/elasticbeanstalk/home?region=us-east-1#/newApplication?applicationName=Metabase&platform=Docker&environmentType=SingleInstance&tierName=WebServer&instanceType=t3a.small&withVpc=true) that will provide you with a few configurations and will launch Metabase in US-East region
+3) Upload the file you downloaded in the first step and click "Review and Launch"
+   4) Go to the Network section, click "Edit", select the default VPC, enable "Public IP Address", select one "Availability zone" and finally click "Save"
+5) Click on "Create App" and wait a few minutes till Metabase launches, you will be able to access your test Metabase instance in the link that appears in the top of the page under the name of the environment.
+
+**Note**: this environment is for testing purposes only and it will lose all data once it reboots as it does not have an application database connected where Metabase can persist its data. If you want to connect an application database to this simple deployment, check out [how to create an RDS database](creating-RDS-database-on-AWS.html) and connect it later to this environment via [environment variables](environment-variables.html)
+
+## Comprehensive guide
+
+This guide tends to be for advanced users, **so proceed with caution** and only if you know what you are doing.
+
+In the following guide we will build a highly-available and production ready Metabase deployment, which will include:
+a) Public (internet facing) and Private subnets
+b) NAT Gateways (so instances in Private subnets can fetch updates without being exposed)
+c) Application Load balancer (so the architecture takes )
+
+following components:
 - a region (where your Metabase application will exist)
 - a network (where your application will reside and interact with other applications or servers if needed)
 - a security group (a firewall, for keeping everything secure)
@@ -95,7 +115,23 @@ Click **Review and launch**.  You'll be directed to a page to configure and laun
 
 ## Step 2 - Configure the basic Metabase architecture
 
-### 2.1 Enabling enhanced health checks
+### 2.1 Enabling VPC
+
+A Virtual Private Cloud (VPC) is a virtual network you can use to isolate resources. Inside these VPC's, you can create subnets, firewall rules, route tables and many more. It's one of the foundational features of AWS, and you can learn more about it [here](https://aws.amazon.com/vpc/faqs/).
+
+You must configure your Application launch in a VPC, otherwise you'll receive an error when creating it as AWS no longer supports launching instances outside VPC's. To use a VPC, head to the **Network** section in the configuration and click on the `Edit` button.
+
+![Elastic Beanstalk Network section](images/EBNetworkSection.png)
+
+Once inside the Network configuration, you need to select the VPC where the Application will exist. If you haven't created a VPC, then AWS creates a `default` VPC per region that you can use.
+
+You need to select __at least__ 2 zones where the Load Balancer (we will configure this component in the next step) will balance the traffic, and  __at least__ 1 zone where the instance will exist. For the load balancer to send traffic to a living instance, there has to be a zone in common.
+
+![Elastic Beanstalk Networking configuration](images/EBNetworkingConfig.png)
+
+After configuring the zones for both the load balancer and the application, click **Save** at the bottom of the page. 
+
+### 2.2 Enabling enhanced health checks
 
 To set up your load balancer, you'll need to enable enhanced health checks for your Elastic Beanstalk environment. 
 
@@ -115,29 +151,13 @@ The **Health check path** is where the Load balancer asks the application if its
 
 After configuring this health check you can click on `Save` at the bottom of the page.
 
-### 2.2 Enabling VPC
-
-A Virtual Private Cloud (VPC) is a virtual network you can use to isolate resources. Inside these VPC's, you can create subnets, firewall rules, route tables and many more. It's one of the foundational features of AWS, and you can learn more about it [here](https://aws.amazon.com/vpc/faqs/).
-
-You must configure your Application launch in a VPC, otherwise you'll receive an error when creating it as AWS no longer supports launching instances outside VPC's. To use a VPC, head to the **Network** section in the configuration and click on the `Edit` button.
-
-![Elastic Beanstalk Network section](images/EBNetworkSection.png)
-
-Once inside the Network configuration, you need to select the VPC where the Application will exist. If you haven't created a VPC, then AWS creates a `default` VPC per region that you can use.
-
-You need to select __at least__ 2 zones where the Load Balancer will balance the traffic, and  __at least__ 1 zone where the instance will exist. For the load balancer to send traffic to a living instance, there has to be a zone in common.
-
-![Elastic Beanstalk Networking configuration](images/EBNetworkingConfig.png)
-
-After configuring the zones for both the load balancer and the application, click **Save** at the bottom of the page. 
-
 ### 2.3 Final step and deploy
 
 Now go to the Capacity section and click **Edit**.
 
 ![Elastic Beanstalk Networking configuration](images/EBCapacity.png)
 
-The only change you need to do here is to reduce the number of Instances from 4 (the default number) to 1, as we still haven't created a centralized database where Metabase will save all of its configurations and will be using only the embedded H2 database which lives __inside__ the Metabase container and [is *not recommended* for production workloads](configuring-application-database.html) as there will be no way to backup and maintain that database. **When your instance is restarted for any reason you'll lose all your Metabase data**. If you are just doing a quick trial of Metabase that may be okay but otherwise you would like to start [creating your database engine in RDS separately](creating-RDS-database-on-AWS.html) or deploy one a separate server. You can take a look at the [Metabase at Scale](https://www.metabase.com/learn/data-diet/analytics/metabase-at-scale.html) article we wrote about how you can build redundant and scalable Metabase architectures.
+The only change you need to do here is to reduce the number of Instances from 4 (the default number) to 1, as we still haven't created a centralized database where Metabase will save all of its configurations and will be using only the embedded H2 database which lives __inside__ the Metabase container and [is *not recommended* for production workloads](configuring-application-database.html) as there will be no way to backup and maintain that database. **When your instance is restarted for any reason you'll lose all your Metabase data**. If you are just doing a quick trial of Metabase that may be okay but otherwise you would like to start [creating your database engine in RDS separately](creating-RDS-database-on-AWS.html) or deploy one a separate server. You can take a look at the [Metabase at Scale](https://www.metabase.com/learn/data-diet/analytics/metabase-at-scale.html) article we wrote about how you can build highly-available and scalable Metabase architectures.
 
 ![Elastic Beanstalk Networking configuration](images/EBCapacityModified.png)
 
@@ -151,7 +171,7 @@ When it's all done you should see something like this:
 
 ![ebcomplete](images/EBComplete.png)
 
-To see your new Metabase instance, simply click on the link under your environment name in the top-left (it will end with `.elasticbeanstalk.com`)
+To see your new Metabase instance, go now to EC2 on the top bar, and once there look for "Load Balancers" in the left menu and open the link of the Load Balancer which is located next to "DNS Name".
 
 Now that you’ve installed Metabase, it’s time to [set it up and connect it to your database](../setting-up-metabase.md).
 
