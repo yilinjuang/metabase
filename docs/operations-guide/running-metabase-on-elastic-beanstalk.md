@@ -25,10 +25,10 @@ This guide is comprised of two sections: one with a quick and simple way of laun
 
 ## Quick and simple
 
-1) Click on this [pre-set link](https://console.aws.amazon.com/elasticbeanstalk/home?region=us-east-1#/newApplication?applicationName=Metabase&platform=Docker&environmentType=SingleInstance&tierName=WebServer&instanceType=t3a.small&withVpc=true&sourceBundleUrl=https://s3.amazonaws.com/downloads.metabase.com/{{ site.latest_version }}/metabase-aws-eb.zip) that will provide you with a few configurations already set and will launch in the US East region.
-2) On the "Create a Web App" page, scroll to the bottom to select "Upload your code" option, as AWS does defaults to "Sample Application", then click on "Review and Launch"
+1) Download [this](https://s3.amazonaws.com/downloads.metabase.com/{{ site.latest_version }}/metabase-aws-eb.zip) file which has the configuration of Metabase Elastic Beanstalk deployment
+2) Click on this [pre-set link](https://console.aws.amazon.com/elasticbeanstalk/home?region=us-east-1#/newApplication?applicationName=Metabase&platform=Docker%20running%20on%2064bit%20Amazon%20Linux%202&environmentType=SingleInstance&tierName=WebServer&instanceType=t3a.small&withVpc=true&withRds=false) that will provide you with a few configurations already set and will launch in the US East region. on the bottom of the page, click on "Upload your code" and click on the "Choose file" button to upload the file that you downloaded in the previous step. Then click on "Review and Launch"
 3) Go to the Network section, click "Edit", select the default VPC, enable "Public IP Address", select one "Availability zone" in Instance Subnet
-4) Click on "Create App" and wait a few minutes till Metabase launches, you will be able to access your test Metabase instance in the link that appears in the top of the page under the name of the environment.
+5) Click on "Create App" and wait a few minutes till Metabase launches, you will be able to access your test Metabase instance in the link that appears in the top of the page under the name of the environment.
 
 **Note**: this environment is for testing purposes only and it will lose all data once it reboots as it does not have an application database connected where Metabase can persist its data. If you want to connect an application database to this simple deployment, check out [how to create an RDS database](creating-RDS-database-on-AWS.html) and connect it later to this environment via [environment variables](environment-variables.html)
 
