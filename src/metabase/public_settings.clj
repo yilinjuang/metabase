@@ -58,10 +58,10 @@
   :default "Metabase")
 
 (defsetting site-uuid
-  ;; Don't i18n this docstring because it's not user-facing! :)
-  "Unique identifier used for this instance of Metabase. This is set once and only once the first time it is fetched via
-  its magic getter. Nice!"
-  :visibility :internal
+  (str (deferred-tru "Unique identifier used for this instance of Metabase.")
+       " "
+       (deferred-tru "This is set once and only once the first time it is fetched."))
+  :visibility :public
   :setter     :none
   ;; magic getter will either fetch value from DB, or if no value exists, set the value to a random UUID.
   :getter     (fn []
