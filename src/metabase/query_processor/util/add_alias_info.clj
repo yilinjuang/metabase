@@ -16,19 +16,59 @@
   driver/dispatch-on-initialized-driver
   :hierarchy #'driver/hierarchy)
 
+(def ^:private max-generated-column-alias-length
+  "Length to truncate generated identifiers to in default impl of [[prefix-field-alias]] and [[escape-alias]]."
+  ;; Postgres' limit is 63 bytes -- see https://www.postgresql.org/docs/current/sql-syntax-lexical.html#SQL-SYNTAX-IDENTIFIERS
+  ;; so we'll limit the identifiers we generate to 60 bytes so we have room to add `_2` and stuff without drama
+  60)
+
+(defn truncate-alias
+  "Truncate string `s` if it is longer than `max-length` and append a hex-encoded CRC-32 checksum of the original
+  string. Truncated string is truncated to `max-length - 9` characters so the resulting string is exactly
+  `max-length`. The goal here is that two really long strings that only differ at the end will still have different
+  resulting values.
+
+    (truncate-alias \"some_really_long_string\" 15) ;   -> \"some_r_8e0f9bc2\"
+    (truncate-alias \"some_really_long_string_2\" 15) ; -> \"some_r_2a3c73eb\""
+  [^String s max-length]
+  (letfn [(truncate [s]
+            (let [truncated (subs s 0 (- max-length 9))
+                  checksum  (Long/toHexString (.getValue (doto (java.util.zip.CRC32.)
+                                                           (.update (.getBytes s)))))]
+              (str truncated \_ checksum)))]
+    (cond-> s
+      (> (count s) max-length)
+      truncate)))
+
 (defmethod prefix-field-alias :default
   [_driver prefix field-alias]
-  (str prefix "__" field-alias))
+  ;; if the `prefix` ends up being super long the resulting identifier won't even include part of the field name if it
+  ;; gets truncated by [[truncate-alias]]. Thus we'll truncate `prefix` if needed to keep the result manageable. The
+  ;; whole thing doesn't need to be truncated; [[escape-alias]] will take care of that if needed later.
+  (letfn [(join [x y]
+            (str x "__" y))]
+    (let [s (join prefix field-alias)]
+      (if (<= (count s) max-generated-column-alias-length)
+        s
+        (let [max-part-length (int (/ (- max-generated-column-alias-length 2)
+                                      2))]
+          (join (truncate-alias prefix max-part-length)
+                field-alias))))))
 
 (defmulti ^String escape-alias
   "Return the String that should be emitted in the query for the generated `alias-name`, which will follow the
   equivalent of a SQL `AS` clause. This is to allow for escaping names that particular databases may not allow as
   aliases for custom expressions or fields (even when quoted).
 
-  Defaults to identity (i.e. returns `alias-name` unchanged)."
+  Defaults to [[truncate-alias]] with a max length of [[max-generated-column-alias-length]] (`30` at the time of this
+  writing)."
   {:added "0.41.0" :arglists '([driver alias-name])}
   driver/dispatch-on-initialized-driver
   :hierarchy #'driver/hierarchy)
+
+(defmethod escape-alias :default
+  [_driver ^String s]
+  (truncate-alias s max-generated-column-alias-length))
 
 (defn- make-unique-alias-fn
   "Creates a function with the signature
@@ -40,20 +80,10 @@
   []
   (let [unique-name-fn (mbql.u/unique-name-generator
                         :name-key-fn     str/lower-case
-                        ;; TODO -- we should probably limit the length somehow like we do in
-                        ;; [[metabase.query-processor.middleware.add-implicit-joins/join-alias]], and also update this
-                        ;; function and that one to append a short suffix if we are limited by length. See also
-                        ;; [[escape-alias]] above
                         :unique-alias-fn (fn [original suffix]
                                            (escape-alias driver/*driver* (str original \_ suffix))))]
     (fn unique-alias-fn [position original-alias]
       (unique-name-fn position (escape-alias driver/*driver* original-alias)))))
-
-;; TODO -- this should probably limit the resulting alias, and suffix a short hash as well if it gets too long. See also
-;; [[unique-alias-fn]] below.
-(defmethod escape-alias :default
-  [_driver alias-name]
-  alias-name)
 
 (defn- remove-namespaced-options [options]
   (when options

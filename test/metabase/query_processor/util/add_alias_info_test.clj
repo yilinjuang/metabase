@@ -466,3 +466,91 @@
                            :limit        1})
                         add-alias-info
                         :query)))))))
+
+(deftest crazy-long-identifiers-test
+  (testing "truncated field alias"
+    (is (query= (mt/mbql-query venues
+                  {:expressions {:an_expression_with_a_name_that_is_absolutely_way_longer_than_it_needs_to_be
+                                 [:*
+                                  [:field %price {::add/source-table $$venues
+                                                  ::add/source-alias "PRICE"}]
+                                  2]
+
+                                 :an_expression_with_a_name_that_is_absolutely_way_longer_than_it_needs_to_be_2
+                                 [:*
+                                  [:field %price {::add/source-table $$venues
+                                                  ::add/source-alias "PRICE"}]
+                                  2]}
+                   :fields [[:expression
+                             "an_expression_with_a_name_that_is_absolutely_way_longer_than_it_needs_to_be"
+                             {::add/desired-alias "an_expression_with_a_name_that_is_absolutely_way_lo_40846efe"
+                              ::add/position      0}]
+                            [:expression
+                             "an_expression_with_a_name_that_is_absolutely_way_longer_than_it_needs_to_be_2"
+                             {::add/desired-alias "an_expression_with_a_name_that_is_absolutely_way_lo_9418c20c"
+                              ::add/position      1}]]
+                   :limit  1})
+                (add-alias-info
+                 (mt/mbql-query venues
+                   {:expressions {"an_expression_with_a_name_that_is_absolutely_way_longer_than_it_needs_to_be"   [:* $price 2]
+                                  "an_expression_with_a_name_that_is_absolutely_way_longer_than_it_needs_to_be_2" [:* $price 2]}
+                    :fields      [[:expression "an_expression_with_a_name_that_is_absolutely_way_longer_than_it_needs_to_be"]
+                                  [:expression "an_expression_with_a_name_that_is_absolutely_way_longer_than_it_needs_to_be_2"]]
+                    :limit       1})))))
+
+  (testing "truncated prefix"
+    (is (query= (mt/mbql-query venues
+                  {:joins       [{:strategy     :left-join
+                                  :source-table $$categories
+                                  :alias        "some_really_really_really_long_alias_that_is_way_longer_than_it_needs_to_be"
+                                  :condition
+                                  [:=
+                                   [:field %category_id {::add/source-table $$venues, ::add/source-alias "CATEGORY_ID"}]
+                                   [:field
+                                    %categories.id
+                                    {:join-alias         "some_really_really_really_long_alias_that_is_way_longer_than_it_needs_to_be"
+                                     ::add/source-table  "some_really_really_really_long_alias_that_is_way_longer_than_it_needs_to_be"
+                                     ::add/source-alias  "ID"
+                                     ::add/desired-alias "some_really_really_r_84c39287__ID"
+                                     ::add/position      0}]]
+                                  :fields
+                                  [[:field
+                                    %categories.id
+                                    {:join-alias         "some_really_really_really_long_alias_that_is_way_longer_than_it_needs_to_be"
+                                     ::add/source-table  "some_really_really_really_long_alias_that_is_way_longer_than_it_needs_to_be"
+                                     ::add/source-alias  "ID"
+                                     ::add/desired-alias "some_really_really_r_84c39287__ID"
+                                     ::add/position      0}]
+                                   [:field
+                                    %categories.name
+                                    {:join-alias         "some_really_really_really_long_alias_that_is_way_longer_than_it_needs_to_be"
+                                     ::add/source-table  "some_really_really_really_long_alias_that_is_way_longer_than_it_needs_to_be"
+                                     ::add/desired-alias "some_really_really_r_84c39287__NAME"
+                                     ::add/source-alias  "NAME"
+                                     ::add/position      1}]]}]
+                   :fields [[:field
+                             %categories.id
+                             {:join-alias         "some_really_really_really_long_alias_that_is_way_longer_than_it_needs_to_be"
+                              ::add/source-table  "some_really_really_really_long_alias_that_is_way_longer_than_it_needs_to_be"
+                              ::add/source-alias  "ID"
+                              ::add/desired-alias "some_really_really_r_84c39287__ID"
+                              ::add/position      0}]
+                            [:field
+                             %categories.name
+                             {:join-alias         "some_really_really_really_long_alias_that_is_way_longer_than_it_needs_to_be"
+                              ::add/source-table  "some_really_really_really_long_alias_that_is_way_longer_than_it_needs_to_be"
+                              ::add/source-alias  "NAME"
+                              ::add/desired-alias "some_really_really_r_84c39287__NAME"
+                              ::add/position      1}]]
+                   :limit  1})
+                (add-alias-info
+                 (mt/mbql-query venues
+                   {:joins       [{:source-table $$categories
+                                   :alias        "some_really_really_really_long_alias_that_is_way_longer_than_it_needs_to_be"
+                                   :condition    [:=
+                                                  $category_id
+                                                  &some_really_really_really_long_alias_that_is_way_longer_than_it_needs_to_be.categories.id]
+                                   :fields       :all}]
+                    :fields      [&some_really_really_really_long_alias_that_is_way_longer_than_it_needs_to_be.categories.id
+                                  &some_really_really_really_long_alias_that_is_way_longer_than_it_needs_to_be.categories.name]
+                    :limit       1}))))))
