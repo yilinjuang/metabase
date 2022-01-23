@@ -9,12 +9,13 @@ import SelectButton from "metabase/core/components/SelectButton";
 import _ from "underscore";
 import cx from "classnames";
 
-import AccordionList from "./AccordionList";
+import AccordionList from "../AccordionList";
 import { createSelector } from "reselect";
 
 import { color } from "metabase/lib/colors";
 
 import Uncontrollable from "metabase/hoc/Uncontrollable";
+import { composeEventHandlers } from "metabase/lib/compose-event-handlers";
 
 const MIN_ICON_WIDTH = 20;
 
@@ -87,6 +88,7 @@ export default class Select extends Component {
     );
     this._getValues = () => _getValues(this.props);
     this._getValuesSet = () => _getValuesSet(this.props);
+    this.selectButtonRef = React.createRef();
   }
 
   _getSections() {
@@ -141,6 +143,7 @@ export default class Select extends Component {
     onChange({ target: { value } });
     if (!multiple) {
       this._popover.close();
+      this.handleClose();
     }
   };
 
@@ -167,6 +170,10 @@ export default class Select extends Component {
       );
     }
     return <span style={{ minWidth: MIN_ICON_WIDTH }} />;
+  };
+
+  handleClose = () => {
+    this.selectButtonRef.current?.focus();
   };
 
   render() {
@@ -197,6 +204,7 @@ export default class Select extends Component {
         triggerElement={
           this.props.triggerElement || (
             <SelectButton
+              ref={this.selectButtonRef}
               className="flex-full"
               hasValue={selectedNames.length > 0}
               {...buttonProps}
@@ -212,7 +220,7 @@ export default class Select extends Component {
             </SelectButton>
           )
         }
-        onClose={onClose}
+        onClose={composeEventHandlers(onClose, this.handleClose)}
         triggerClasses={cx("flex", className)}
         isInitiallyOpen={isInitiallyOpen}
         verticalAttachments={["top", "bottom"]}
