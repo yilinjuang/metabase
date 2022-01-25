@@ -286,16 +286,26 @@ export default class AccordionList extends Component {
   handleKeyDown = event => {
     if (event.key === "ArrowUp") {
       event.preventDefault();
-      return this.setState(prev => ({
-        cursor: this.findClosestItemRow(prev.cursor, "prev") ?? prev.cursor,
-      }));
+      return this.setState(
+        prev => ({
+          cursor: this.findClosestItemRow(prev.cursor, "prev") ?? prev.cursor,
+        }),
+        () => {
+          // this._list.scrollToRow(this.state.cursor);
+        },
+      );
     }
 
     if (event.key === "ArrowDown") {
       event.preventDefault();
-      return this.setState(prev => ({
-        cursor: this.findClosestItemRow(prev.cursor, "next") ?? prev.cursor,
-      }));
+      return this.setState(
+        prev => ({
+          cursor: this.findClosestItemRow(prev.cursor, "next") ?? prev.cursor,
+        }),
+        () => {
+          // this._list.scrollToRow(this.state.cursor);
+        },
+      );
     }
 
     if (event.key === " " || event.key === "Enter") {
@@ -550,7 +560,7 @@ export default class AccordionList extends Component {
           // the CellMeasurerCache to calculate the height
           overscanRowCount={100}
           // ensure `scrollToRow` scrolls the row to the top of the list
-          scrollToAlignment="start"
+          // scrollToAlignment="start"
           rowRenderer={({ key, index, parent, style }) => {
             return (
               <CellMeasurer
