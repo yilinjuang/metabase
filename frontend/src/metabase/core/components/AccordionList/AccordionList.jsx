@@ -123,7 +123,6 @@ export default class AccordionList extends Component {
   };
 
   componentDidMount() {
-    this.containerRef?.current?.focus();
     // NOTE: for some reason the row heights aren't computed correctly when
     // first rendering, so force the list to update
     this._forceUpdateList();
@@ -131,6 +130,8 @@ export default class AccordionList extends Component {
     // Use list.scrollToRow instead of the scrollToIndex prop since the
     // causes the list's scrolling to be pinned to the selected row
     setTimeout(() => {
+      this.containerRef?.current?.focus();
+
       const index = this._initialSelectedRowIndex;
 
       this.setState({ cursor: index ?? 0 });
@@ -283,16 +284,15 @@ export default class AccordionList extends Component {
   };
 
   handleKeyDown = event => {
-    event.preventDefault();
-    event.stopPropagation();
-
     if (event.key === "ArrowUp") {
+      event.preventDefault();
       return this.setState(prev => ({
         cursor: this.findClosestItemRow(prev.cursor, "prev") ?? prev.cursor,
       }));
     }
 
     if (event.key === "ArrowDown") {
+      event.preventDefault();
       return this.setState(prev => ({
         cursor: this.findClosestItemRow(prev.cursor, "next") ?? prev.cursor,
       }));
@@ -535,6 +535,7 @@ export default class AccordionList extends Component {
         tabIndex={0}
       >
         <List
+          scrollToIndex={this.state.cursor}
           id={id}
           ref={list => (this._list = list)}
           className={className}
