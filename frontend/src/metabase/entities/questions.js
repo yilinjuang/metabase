@@ -35,11 +35,11 @@ const Questions = createEntity({
         undo(opts, "question", archived ? "archived" : "unarchived"),
       ),
 
-    setCollection: ({ id }, collection, opts) =>
+    setCollection: ({ id, model }, collection, opts) =>
       Questions.actions.update(
         { id },
         { collection_id: canonicalCollectionId(collection && collection.id) },
-        undo(opts, "question", "moved"),
+        undo(opts, isDataModel(model) ? "model" : "question", "moved"),
       ),
 
     setPinned: ({ id }, pinned, opts) =>
@@ -108,7 +108,7 @@ const Questions = createEntity({
 });
 
 function getIcon(question) {
-  if (question.dataset || question.model === "dataset") {
+  if (question.dataset || isDataModel(question.model)) {
     return { name: "model" };
   }
   const visualization = require("metabase/visualizations").default.get(
@@ -121,3 +121,7 @@ function getIcon(question) {
 }
 
 export default Questions;
+
+function isDataModel(itemModel) {
+  return itemModel === "dataset";
+}
